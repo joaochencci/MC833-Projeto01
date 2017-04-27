@@ -1,5 +1,12 @@
 <h1>Projeto 1</h1> 
-<h2>Implementação de cliente-servidor simples usando sockets.</h2>
+<h1>Implementação de cliente-servidor simples usando sockets.</h2>
+
+<h2>Bons links:</h2>
+
+- http://www.programminglogic.com/example-of-client-server-program-in-c-using-sockets-and-tcp/
+- http://www.binarytides.com/server-client-example-c-sockets-linux/
+
+<h2>Enunciado:</h2>
 
 - Linguagem: C
 - Data de entrega: 4 de maio.
