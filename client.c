@@ -17,11 +17,14 @@ int main(int argc, char *argv[])
   int len;
 
   /* verificação de argumentos */
-
-  // TODO
+  if (argc != 2)
+  {
+    puts("Numero invalido de argumentos");
+    puts("Passe o endereco do servidor socket a ser conectado");
+    return 1;
+  }
 
   /* tradução de nome para endereço IP */
-
   // TODO
 
   /* criação da estrutura de dados de endereço */
@@ -35,7 +38,7 @@ int main(int argc, char *argv[])
   }
   puts("Socket criado");
 
-  server.sin_addr.s_addr = inet_addr("127.0.0.1");
+  server.sin_addr.s_addr = inet_addr(argv[1]);
   server.sin_family = AF_INET;
   server.sin_port = htons(SERVER_PORT);
 

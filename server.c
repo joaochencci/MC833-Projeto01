@@ -63,6 +63,9 @@ int main()
 
       //Send the message back to client
       write(new_s, buf, strlen(buf));
+
+      //clear buffer
+      bzero(buf, sizeof(buf));
     }
 
     if (read_size == 0)
@@ -81,6 +84,9 @@ int main()
     perror("Aceite falhou");
     return 1;
   }
+
+  close(new_s);
+  close(s);
 
   return 0;
 }
