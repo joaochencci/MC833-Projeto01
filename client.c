@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #define SERVER_PORT 12345
 #define MAX_LINE 256
@@ -54,7 +55,7 @@ int main(int argc, char *argv[])
   while (1)
   {
     printf("Digite uma mensagem para ser enviada ao servidor: ");
-    scanf("%s", buf);
+    fgets (buf, MAX_LINE, stdin);
 
     //Envia a mensagem
     if (send(s, buf, strlen(buf), 0) < 0)

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #define LISTEN_PORT 12345
 #define MAX_PENDING 5
