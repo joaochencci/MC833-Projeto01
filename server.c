@@ -12,9 +12,9 @@
 int main()
 {
   struct sockaddr_in server, client;
-  char buf[MAX_LINE];
+  char buf[MAX_LINE], ip[MAX_LINE];
   unsigned int len;
-  int s, new_s, c, read_size;
+  int s, new_s, c, read_size, pid;
 
   /* criação da estrutura de dados de endereço */
   //bzero((char *)&server, sizeof(server));
@@ -54,12 +54,32 @@ int main()
   //aceita conexoes de um client
   while ((new_s = accept(s, (struct sockaddr *)&client, (socklen_t *)&c)))
   {
-    puts("Conexao aceita");
+    // traduz porta e ip
+    inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
+    printf("\nNovo cliente conectado\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
 
+    // cria fork do processo
+    if ((pid = fork()) == -1)
+    {
+      perror("Erro ao criar processo do fork");
+      close(new_s);
+      continue;
+    }
+
+    // processo pai
+    if (pid > 0)
+    {
+      close(new_s);
+      continue;
+    }
+
+    // processo filho
     //Recebe uma mensagem do client
     while ((read_size = recv(new_s, buf, MAX_LINE, 0)) > 0)
     {
-      puts("Mensagem recebida: ");
+      inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
+      printf("Nova mensagem recebida de\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port), buf);
+      puts("Mensagem:");
       puts(buf);
 
       //Send the message back to client
@@ -78,6 +98,9 @@ int main()
     {
       perror("Recebimento falhou");
     }
+
+    // fecha processo filho
+    close(new_s);
   }
 
   if (new_s < 0)

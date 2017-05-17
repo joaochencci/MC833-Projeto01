@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
   struct hostent *host_address;
   struct sockaddr_in server;
   char *host;
-  char buf[MAX_LINE];
+  char buf[MAX_LINE], ip[MAX_LINE];
   int s;
   int len;
 
@@ -49,13 +49,15 @@ int main(int argc, char *argv[])
     perror("Falha no estabelecimento da conexao");
     return 1;
   }
-  puts("Conectado\n");
+
+  inet_ntop(AF_INET, &(server.sin_addr), ip, INET_ADDRSTRLEN);
+  printf("\nConectado em\nIP: %s Porta: %u\n", ip, ntohs(server.sin_port));
 
   /* ler e enviar linhas de texto, receber eco */
   while (1)
   {
     printf("Digite uma mensagem para ser enviada ao servidor: ");
-    fgets (buf, MAX_LINE, stdin);
+    fgets(buf, MAX_LINE, stdin);
 
     //Envia a mensagem
     if (send(s, buf, strlen(buf), 0) < 0)
