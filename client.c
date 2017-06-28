@@ -3,10 +3,95 @@
 #include <string.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <time.h>
 #include <arpa/inet.h>
 
 #define SERVER_PORT 12345
 #define MAX_LINE 256
+
+#define N 0
+#define S 1
+#define L 2
+#define O 3
+
+#define SECURITY 4
+#define ENTERTAINMENT 5
+#define CONFORT 6
+
+#define GO 1
+#define STOP 0
+#define EMERGENCY -1
+
+struct packet {
+   int direction;
+   int position;
+   int speed;
+   int size;
+   int port;
+   int resolution;
+} packet;
+
+char * printCar(struct packet packet) {
+  char * res = (char *) malloc(sizeof(char) * 30);
+  sprintf(res, "%d %d %d %d", packet.direction, packet.position, packet.speed, packet.size);
+  return res;
+}
+
+struct packet initializeCar() {
+  time_t t;
+  srand((unsigned) time(&t));
+
+  int direction = rand() % 4;
+  int position = (direction%2 == 0) ? 11 : 0;
+  int speed = (rand() % 3) + 1;
+  int size = (rand() % 3) + 1;
+
+  struct packet pkt = {direction, position, speed, size};
+  char * inputStr = printCar(pkt);
+  printf("Initial State: %s \n", inputStr);
+  return pkt;
+}
+
+struct packet moveCar(int controlSignal, struct packet packet) {
+  if (controlSignal == GO) {
+
+    if (packet.direction == N || packet.direction == L) {
+      packet.position += packet.speed;
+      if (packet.position > 11) {
+        int dif = packet.position - 11;
+        packet.position = 11 - dif + 1;
+
+        if (packet.direction == N)
+        {
+          packet.direction = S;
+        } else {
+          packet.direction = O;
+        }
+      }
+    } else {
+      packet.position -= packet.speed;
+      if (packet.position < 0) {
+        packet.position = packet.position*(-1) - 1;
+
+        if (packet.direction == S)
+        {
+          packet.direction = N;
+        } else {
+          packet.direction = L;
+        }
+      }
+    }
+
+    if (packet.speed < 3) {
+      packet.speed += 1;
+    }
+    
+  } else {
+    packet.speed = 0;
+  }
+
+  return packet;
+}
 
 int main(int argc, char *argv[])
 {
@@ -53,18 +138,24 @@ int main(int argc, char *argv[])
   inet_ntop(AF_INET, &(server.sin_addr), ip, INET_ADDRSTRLEN);
   printf("\nConectado em\nIP: %s Porta: %u\n", ip, ntohs(server.sin_port));
 
+  printf("O carro inicializado é: \n");
+  struct packet pkt = initializeCar();
+
   /* ler e enviar linhas de texto, receber eco */
   while (1)
   {
-    printf("Digite uma mensagem para ser enviada ao servidor: ");
-    fgets(buf, MAX_LINE, stdin);
+    // printf("O carro inicializado é: \n");
+    // fgets(buf, MAX_LINE, stdin);
+    char * inputStr = printCar(pkt);
 
     //Envia a mensagem
-    if (send(s, buf, strlen(buf), 0) < 0)
+    if (send(s, inputStr, strlen(inputStr), 0) < 0)
     {
       puts("Envio falhou");
       return 1;
     }
+
+    printf("State: %s \n", inputStr);
 
     //Recebe a resposta do servidor
     if (recv(s, buf, MAX_LINE, 0) < 0)
@@ -73,7 +164,10 @@ int main(int argc, char *argv[])
       break;
     }
     puts("Resposta do servidor: ");
-    puts(buf);
+    // puts(buf);
+    int controlSignal;
+    sscanf(buf, "%d", &controlSignal);
+    pkt = moveCar(controlSignal, pkt);
   }
 
   close(s);

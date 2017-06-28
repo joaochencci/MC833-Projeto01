@@ -8,6 +8,78 @@
 #define LISTEN_PORT 12345
 #define MAX_PENDING 5
 #define MAX_LINE 256
+#define N_CARS 5
+
+#define N 0
+#define S 1
+#define L 2
+#define O 3
+
+#define SECURITY 4
+#define ENTERTAINMENT 5
+#define CONFORT 6
+
+#define GO 1
+#define STOP 0
+#define EMERGENCY -1
+
+struct packet {
+   int direction;
+   int position;
+   int speed;
+   int size;
+   unsigned int port;
+} packet;
+
+struct car {
+  int valid;
+  struct packet packet;
+} car;
+
+struct car cars[N_CARS] = {{0},{0},{0},{0},{0}};
+
+char * printCar(struct packet packet) {
+  char * res = (char *) malloc(sizeof(char) * 30);
+  sprintf(res, "%d %d %d %d %u", packet.direction, packet.position, packet.speed, packet.size, packet.port);
+  return res;
+}
+
+struct packet decode(char *rcvMsg, unsigned int port) {
+  struct packet p;
+  sscanf(rcvMsg, "%d %d %d %d", &p.direction, &p.position, &p.speed, &p.size);
+  p.port = port;
+  return p;
+}
+
+int countValids() {
+  int counter = 0, i = 0;
+  for(i=0; i<N_CARS; i++) {
+    if(cars[i].valid == 1) {
+      counter += 1;
+    }
+  }
+
+  return counter;
+}
+
+void addCarPacket(struct packet pkt) {
+  int i=0;
+  printf("ARRAY: %d \n", cars[0].valid);
+  for (i=0; i<N_CARS; i++) {
+    if(cars[i].valid == 1) {
+      if (cars[i].packet.port == pkt.port)
+      {
+        struct car car = {1, pkt};
+        cars[i] = car;
+        break;
+      }
+    } else {
+      struct car car = {1, pkt};
+      cars[i] = car;
+      break;
+    }
+  }
+}
 
 int main()
 {
@@ -15,6 +87,7 @@ int main()
   char buf[MAX_LINE], ip[MAX_LINE];
   unsigned int len;
   int s, new_s, c, read_size, pid;
+  int response = 0;
 
   /* criação da estrutura de dados de endereço */
   //bzero((char *)&server, sizeof(server));
@@ -78,12 +151,20 @@ int main()
     while ((read_size = recv(new_s, buf, MAX_LINE, 0)) > 0)
     {
       inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
-      printf("Nova mensagem recebida de\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port), buf);
-      puts("Mensagem:");
-      puts(buf);
+      printf("Nova mensagem recebida de\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
 
-      //Send the message back to client
-      write(new_s, buf, strlen(buf));
+      struct packet pkt = decode(buf, ntohs(client.sin_port));
+      addCarPacket(pkt);
+      //bool v = verifyArrayComplete(seq);
+      //if (v) {
+      //  flag = logicaColisao()
+      //}
+      //while(!flag) {
+      //  verifyArrayComplete(seq)
+      //} responder com array[client].resolution;
+      if(response) {
+        write(new_s, "1", 1);  
+      }
 
       //clear buffer
       bzero(buf, sizeof(buf));
