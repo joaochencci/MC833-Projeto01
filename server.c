@@ -29,6 +29,7 @@ struct packet {
    int speed;
    int size;
    unsigned int port;
+   int resolution;
 } packet;
 
 struct car {
@@ -48,6 +49,10 @@ struct packet decode(char *rcvMsg, unsigned int port) {
   struct packet p;
   sscanf(rcvMsg, "%d %d %d %d", &p.direction, &p.position, &p.speed, &p.size);
   p.port = port;
+
+  char * str = printCar(p);
+  printf("%s \n", str);
+
   return p;
 }
 
@@ -64,7 +69,7 @@ int countValids() {
 
 void addCarPacket(struct packet pkt) {
   int i=0;
-  printf("ARRAY: %d \n", cars[0].valid);
+
   for (i=0; i<N_CARS; i++) {
     if(cars[i].valid == 1) {
       if (cars[i].packet.port == pkt.port)
@@ -81,13 +86,36 @@ void addCarPacket(struct packet pkt) {
   }
 }
 
-int main()
-{
+int colisionAvoidance() {
+  if (1 /* array está preenchido com mesmo grupo de movimentos */)
+  {
+    /* lógica de colisão */
+
+    /* setar os resolutions no array */
+
+    return 1;
+
+  } else {
+    
+    /* continua aguardando estar preenchido */
+
+    return 0;
+  }
+}
+
+struct car carByPort() {
+
+  /* TODO: Implementar esse método */
+
+  return cars[0];
+}
+
+int main() {
   struct sockaddr_in server, client;
   char buf[MAX_LINE], ip[MAX_LINE];
   unsigned int len;
   int s, new_s, c, read_size, pid;
-  int response = 0;
+  int response=1, k=0;
 
   /* criação da estrutura de dados de endereço */
   //bzero((char *)&server, sizeof(server));
@@ -155,15 +183,16 @@ int main()
 
       struct packet pkt = decode(buf, ntohs(client.sin_port));
       addCarPacket(pkt);
-      //bool v = verifyArrayComplete(seq);
-      //if (v) {
-      //  flag = logicaColisao()
-      //}
-      //while(!flag) {
-      //  verifyArrayComplete(seq)
-      //} responder com array[client].resolution;
+      
+      do {
+        k = colisionAvoidance();
+      } while (!k);
+
       if(response) {
-        write(new_s, "1", 1);  
+        char * str = (char *) malloc(sizeof(char) * 30);
+        // sprintf(str, "%d", carByPort.packet.resolution);
+        sprintf(str, "%d", 1);
+        write(new_s, str, 1);  
       }
 
       //clear buffer
