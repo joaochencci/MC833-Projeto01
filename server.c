@@ -23,43 +23,50 @@
 #define STOP 0
 #define EMERGENCY -1
 
-struct packet {
-   int direction;
-   int position;
-   int speed;
-   int size;
-   unsigned int port;
-   int resolution;
+struct packet
+{
+  int direction;
+  int position;
+  int speed;
+  int size;
+  unsigned int port;
+  int resolution;
 } packet;
 
-struct car {
+struct car
+{
   int valid;
   struct packet packet;
 } car;
 
-struct car cars[N_CARS] = {{0},{0},{0},{0},{0}};
+struct car cars[N_CARS] = {{0}, {0}, {0}, {0}, {0}};
 
-char * printCar(struct packet packet) {
-  char * res = (char *) malloc(sizeof(char) * 30);
+char *printCar(struct packet packet)
+{
+  char *res = (char *)malloc(sizeof(char) * 30);
   sprintf(res, "%d %d %d %d %u", packet.direction, packet.position, packet.speed, packet.size, packet.port);
   return res;
 }
 
-struct packet decode(char *rcvMsg, unsigned int port) {
+struct packet decode(char *rcvMsg, unsigned int port)
+{
   struct packet p;
   sscanf(rcvMsg, "%d %d %d %d", &p.direction, &p.position, &p.speed, &p.size);
   p.port = port;
 
-  char * str = printCar(p);
+  char *str = printCar(p);
   printf("%s \n", str);
 
   return p;
 }
 
-int countValids() {
+int countValids()
+{
   int counter = 0, i = 0;
-  for(i=0; i<N_CARS; i++) {
-    if(cars[i].valid == 1) {
+  for (i = 0; i < N_CARS; i++)
+  {
+    if (cars[i].valid == 1)
+    {
       counter += 1;
     }
   }
@@ -67,18 +74,23 @@ int countValids() {
   return counter;
 }
 
-void addCarPacket(struct packet pkt) {
-  int i=0;
+void addCarPacket(struct packet pkt)
+{
+  int i = 0;
 
-  for (i=0; i<N_CARS; i++) {
-    if(cars[i].valid == 1) {
+  for (i = 0; i < N_CARS; i++)
+  {
+    if (cars[i].valid == 1)
+    {
       if (cars[i].packet.port == pkt.port)
       {
         struct car car = {1, pkt};
         cars[i] = car;
         break;
       }
-    } else {
+    }
+    else
+    {
       struct car car = {1, pkt};
       cars[i] = car;
       break;
@@ -86,36 +98,185 @@ void addCarPacket(struct packet pkt) {
   }
 }
 
-int colisionAvoidance() {
+struct packet moveCar(struct packet packet)
+{
+  if (packet.direction == N || packet.direction == L)
+  {
+    packet.position += packet.speed;
+    if (packet.position > 11)
+    {
+      int dif = packet.position - 11;
+      packet.position = 11 - dif + 1;
+
+      if (packet.direction == N)
+      {
+        packet.direction = S;
+      }
+      else
+      {
+        packet.direction = O;
+      }
+    }
+  }
+  else
+  {
+    packet.position -= packet.speed;
+    if (packet.position < 0)
+    {
+      packet.position = packet.position * (-1) - 1;
+
+      if (packet.direction == S)
+      {
+        packet.direction = N;
+      }
+      else
+      {
+        packet.direction = L;
+      }
+    }
+  }
+  return packet;
+}
+
+int detectColision(struct packet car1, struct packet car2)
+{
+  int c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+
+  if (car1.direction == N)
+  {
+    if (car1.position <= 6 && car1.position > 6 - car1.size)
+      c4++;
+    if (car1.position <= 5 && car1.position > 5 - car1.size)
+      c2++;
+  }
+  if (car1.direction == S)
+  {
+    if (car1.position >= 6 && car1.position < 6 + car1.size)
+      c3++;
+    if (car1.position >= 5 && car1.position < 5 + car1.size)
+      c1++;
+  }
+  if (car1.direction == L)
+  {
+    if (car1.position <= 6 && car1.position > 6 - car1.size)
+      c2++;
+    if (car1.position <= 5 && car1.position > 5 - car1.size)
+      c1++;
+  }
+  if (car1.direction == O)
+  {
+    if (car1.position >= 6 && car1.position < 6 + car1.size)
+      c4++;
+    if (car1.position >= 5 && car1.position < 5 + car1.size)
+      c3++;
+  }
+
+  if (car2.direction == N)
+  {
+    if (car2.position <= 6 && car2.position > 6 - car2.size)
+      c4++;
+    if (car2.position <= 5 && car2.position > 5 - car2.size)
+      c2++;
+  }
+  if (car2.direction == S)
+  {
+    if (car2.position >= 6 && car2.position < 6 + car2.size)
+      c3++;
+    if (car2.position >= 5 && car2.position < 5 + car2.size)
+      c1++;
+  }
+  if (car2.direction == L)
+  {
+    if (car2.position <= 6 && car2.position > 6 - car2.size)
+      c2++;
+    if (car2.position <= 5 && car2.position > 5 - car2.size)
+      c1++;
+  }
+  if (car2.direction == O)
+  {
+    if (car2.position >= 6 && car2.position < 6 + car2.size)
+      c4++;
+    if (car2.position >= 5 && car2.position < 5 + car2.size)
+      c3++;
+  }
+
+  if (c1 > 1 || c2 > 1 || c3 > 1 || c4 > 1)
+  {
+    return 1;
+  }
+  return 0;
+}
+
+int colisionAvoidance(struct car cars[])
+{
   if (1 /* array está preenchido com mesmo grupo de movimentos */)
   {
-    /* lógica de colisão */
+    char* str = printCar(cars[0].packet);
+    // calcula proxima posicao
+    int i = 0;
+    for (i = 0; i < N_CARS; i++)
+    {
+      cars[i].packet = moveCar(cars[i].packet);
+    }
 
-    /* setar os resolutions no array */
+    str = printCar(cars[0].packet);
+
+    // verifica sobreposicao de carros
+    int j = 0;
+    for (i = 0; i < N_CARS; i++)
+    {
+      for (j = 0; j < i; j++)
+      {
+        if (detectColision(cars[i].packet, cars[j].packet))
+        {
+          cars[j].packet.resolution = STOP;
+        }
+      }
+    }
+
+    for (i = 0; i < N_CARS; i++)
+    {
+      if (cars[i].packet.resolution != STOP)
+      {
+        cars[i].packet.resolution = GO;
+      }
+    }
 
     return 1;
+  }
+  else
+  {
 
-  } else {
-    
     /* continua aguardando estar preenchido */
 
     return 0;
   }
 }
 
-struct car carByPort() {
+struct car carByPort()
+{
 
   /* TODO: Implementar esse método */
 
   return cars[0];
 }
 
-int main() {
+void printResolution(struct car cars[])
+{
+  int i = 0;
+  for (i = 0; i < N_CARS; i++)
+  {
+    printf("Res: %d\n", cars[i].packet.resolution);
+  }
+}
+
+int main()
+{
   struct sockaddr_in server, client;
   char buf[MAX_LINE], ip[MAX_LINE];
   unsigned int len;
   int s, new_s, c, read_size, pid;
-  int response=1, k=0;
+  int response = 0, k = 0;
 
   /* criação da estrutura de dados de endereço */
   //bzero((char *)&server, sizeof(server));
@@ -183,16 +344,29 @@ int main() {
 
       struct packet pkt = decode(buf, ntohs(client.sin_port));
       addCarPacket(pkt);
-      
-      do {
-        k = colisionAvoidance();
+
+      do
+      {
+        struct car cars[N_CARS] = {
+            {1, {N, 11, 2, 2}},
+            {1, {4, O, 2, 1}},
+            {1, {O, 7, 2, 1}},
+            {1, {L, 11, 2, 1}},
+            {1, {S, 4, 2, 2}}};
+
+        printResolution(cars);
+
+        k = colisionAvoidance(cars);
       } while (!k);
 
-      if(response) {
-        char * str = (char *) malloc(sizeof(char) * 30);
+      printResolution(cars);
+
+      if (response)
+      {
+        char *str = (char *)malloc(sizeof(char) * 30);
         // sprintf(str, "%d", carByPort.packet.resolution);
         sprintf(str, "%d", 1);
-        write(new_s, str, 1);  
+        write(new_s, str, 1);
       }
 
       //clear buffer
