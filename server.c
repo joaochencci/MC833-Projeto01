@@ -40,11 +40,27 @@ struct car
   struct packet packet;
 } car;
 
+struct car cars[N_CARS];
+int N_GO = 0;
+int N_STOP = 0;
+
 char *printCar(struct packet packet)
 {
   char *res = (char *)malloc(sizeof(char) * 30);
   sprintf(res, "%d %d %d %d %u", packet.direction, packet.position, packet.speed, packet.size, packet.port);
   return res;
+}
+
+void printResolution()
+{
+  int i = 0;
+  for (i = 0; i < N_CARS; i++)
+  {
+    if (cars[i].valid)
+    {
+      printf("Res: %d\n", cars[i].packet.resolution);
+    }
+  }
 }
 
 struct packet decode(char *rcvMsg, unsigned int port)
@@ -60,14 +76,9 @@ struct packet decode(char *rcvMsg, unsigned int port)
   return p;
 }
 
-struct car cars[N_CARS];
-int N_GO = 0;
-int N_STOP = 0;
-
 void addCarPacket(struct packet pkt)
 {
   int i = 0;
-
   for (i = 0; i < N_CARS; i++)
   {
     if (cars[i].valid == 1)
@@ -265,7 +276,7 @@ int colisionAvoidance(struct packet pkt)
   int i, j;
   for (i = 0; i < N_CARS; i++)
   {
-    for (j = 0; j < i; j++)
+    for (j = i + 1; j < N_CARS; j++)
     {
       if (cars[i].valid && cars[j].valid && detectColision(cars[i].packet, cars[j].packet))
       {
@@ -289,18 +300,6 @@ int colisionAvoidance(struct packet pkt)
     if (cars[i].valid && cars[i].packet.port == pkt.port)
     {
       return cars[i].packet.resolution;
-    }
-  }
-}
-
-void printResolution()
-{
-  int i = 0;
-  for (i = 0; i < N_CARS; i++)
-  {
-    if (cars[i].valid)
-    {
-      printf("Res: %d\n", cars[i].packet.resolution);
     }
   }
 }
@@ -374,10 +373,6 @@ int main()
         exit(1);
       }
 
-      // traduz porta e ip
-      inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
-      printf("\nNovo cliente conectado\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
-
       for (i = 0; i < FD_SETSIZE; i++)
       {
         if (clientes[i] < 0)
@@ -393,6 +388,11 @@ int main()
         exit(1);
       }
       FD_SET(new_s, &todos_fds); // adiciona novo descritor ao conjunto
+
+      // traduz porta e ip
+      inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
+      printf("\nNovo cliente conectado\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
+
       if (new_s > maxfd)
         maxfd = new_s; // para o select
       if (i > cliente_num)
@@ -423,13 +423,14 @@ int main()
 
           int resolution = colisionAvoidance(pkt);
 
-          //printResolution();
+          printResolution();
 
           printf("\n\n GO: %d, STOP: %d\n\n", N_GO, N_STOP);
 
           if (response)
           {
-            char *str = (char *)malloc(sizeof(char) * 30);
+            sleep(1);
+            char *str = (char *)malloc(sizeof(char) * 1);
             sprintf(str, "%d", resolution);
             write(new_s, str, 1);
           }
