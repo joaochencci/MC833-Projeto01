@@ -50,6 +50,7 @@ char *printCar(struct packet packet)
 struct packet decode(char *rcvMsg, unsigned int port)
 {
   struct packet p;
+
   sscanf(rcvMsg, "%d %d %d %d", &p.direction, &p.position, &p.speed, &p.size);
   p.port = port;
 
@@ -59,7 +60,11 @@ struct packet decode(char *rcvMsg, unsigned int port)
   return p;
 }
 
-/*void addCarPacket(struct packet pkt)
+struct car cars[N_CARS];
+int N_GO = 0;
+int N_STOP = 0;
+
+void addCarPacket(struct packet pkt)
 {
   int i = 0;
 
@@ -81,7 +86,7 @@ struct packet decode(char *rcvMsg, unsigned int port)
       break;
     }
   }
-}*/
+}
 
 struct packet moveCar(struct packet packet)
 {
@@ -123,23 +128,6 @@ struct packet moveCar(struct packet packet)
   return packet;
 }
 
-int checkMoment(struct car cars[]) {
-  int result=1, i=0;
-
-  if (N_CARS >= 2) {
-    for (i=0; i < N_CARS-1; i++) {
-      if (cars[i].packet.timestamp == cars[i+1].packet.timestamp) {
-        result = 1;
-      } else {
-        result = 0;
-        break;
-      }
-    }
-  }
-
-  return result;
-}
-
 int detectColision(struct packet car1, struct packet car2)
 {
   int c1 = 0, c2 = 0, c3 = 0, c4 = 0, lb = 0, ub = 0;
@@ -151,22 +139,22 @@ int detectColision(struct packet car1, struct packet car2)
 
     if (car1.direction == N)
     {
-      if (lb <= 5 || ub >= 5)
+      if (lb <= 5 && ub >= 5)
       {
         c4++;
       }
-      if (lb <= 6 || ub >= 6)
+      if (lb <= 6 && ub >= 6)
       {
         c2++;
       }
     }
     else
     {
-      if (lb <= 5 || ub >= 5)
+      if (lb <= 5 && ub >= 5)
       {
         c3++;
       }
-      if (lb <= 6 || ub >= 6)
+      if (lb <= 6 && ub >= 6)
       {
         c4++;
       }
@@ -179,22 +167,22 @@ int detectColision(struct packet car1, struct packet car2)
 
     if (car1.direction == S)
     {
-      if (lb <= 5 || ub >= 5)
+      if (lb <= 5 && ub >= 5)
       {
         c3++;
       }
-      if (lb <= 6 || ub >= 6)
+      if (lb <= 6 && ub >= 6)
       {
         c1++;
       }
     }
     else
     {
-      if (lb <= 5 || ub >= 5)
+      if (lb <= 5 && ub >= 5)
       {
         c2++;
       }
-      if (lb <= 6 || ub >= 6)
+      if (lb <= 6 && ub >= 6)
       {
         c1++;
       }
@@ -267,68 +255,53 @@ int detectColision(struct packet car1, struct packet car2)
   return 0;
 }
 
-int colisionAvoidance(struct car cars[])
+int colisionAvoidance(struct packet pkt)
 {
+  pkt = moveCar(pkt);
 
-  if (checkMoment(cars))
+  addCarPacket(pkt);
+
+  // verifica sobreposicao de carros
+  int i, j;
+  for (i = 0; i < N_CARS; i++)
   {
-    // calcula proxima posicao
-    int i = 0;
-    for (i = 0; i < N_CARS; i++)
+    for (j = 0; j < i; j++)
     {
-      cars[i].packet = moveCar(cars[i].packet);
-    }
-
-    // verifica sobreposicao de carros
-    int j = 0;
-    for (i = 0; i < N_CARS; i++)
-    {
-      for (j = 0; j < i; j++)
+      if (cars[i].valid && cars[j].valid && detectColision(cars[i].packet, cars[j].packet))
       {
-        if (detectColision(cars[i].packet, cars[j].packet))
-        {
-          cars[j].packet.resolution = STOP;
-        }
+        cars[j].packet.resolution = STOP;
+        N_STOP++;
       }
     }
-
-    for (i = 0; i < N_CARS; i++)
-    {
-      if (cars[i].packet.resolution != STOP)
-      {
-        cars[i].packet.resolution = GO;
-      }
-    }
-
-    return 1;
   }
-  else
+
+  for (i = 0; i < N_CARS; i++)
   {
+    if (cars[i].valid && cars[i].packet.resolution != STOP)
+    {
+      cars[i].packet.resolution = GO;
+      N_GO++;
+    }
+  }
 
-    /* continua aguardando estar preenchido */
-
-    return 0;
+  for (i = 0; i < N_CARS; i++)
+  {
+    if (cars[i].valid && cars[i].packet.port == pkt.port)
+    {
+      return cars[i].packet.resolution;
+    }
   }
 }
 
-struct car carByPort(struct car cars[], unsigned int port)
-{
-
-  int i = 0;
-  for (i = 0; i < N_CARS; i++) {
-    if (cars[i].packet.port == port) {
-      return cars[i];
-    }
-  }
-
-}
-
-void printResolution(struct car cars[])
+void printResolution()
 {
   int i = 0;
   for (i = 0; i < N_CARS; i++)
   {
-    printf("Res: %d\n", cars[i].packet.resolution);
+    if (cars[i].valid)
+    {
+      printf("Res: %d\n", cars[i].packet.resolution);
+    }
   }
 }
 
@@ -337,11 +310,10 @@ int main()
   struct sockaddr_in server, client;
   char buf[MAX_LINE], ip[MAX_LINE];
   unsigned int len;
-  int s, new_s, c, read_size, pid;
-  int response = 0, k = 0;
-
-  /* criação da estrutura de dados de endereço */
-  //bzero((char *)&server, sizeof(server));
+  int i, s, new_s, sockfd, c, read_size, cliente_num, maxfd, nready, clientes[FD_SETSIZE];
+  fd_set todos_fds, novo_set;
+  char so_addr[INET_ADDRSTRLEN];
+  int response = 1, k = 0;
 
   /* criação de socket passivo */
   // Argumentos 1) Internet domain 2) Stream socket 3) Default protocol (TCP)
@@ -375,86 +347,96 @@ int main()
   puts("Aguardarndo conexoes...");
   c = sizeof(struct sockaddr_in);
 
+  maxfd = s;
+  cliente_num = -1;
+  for (i = 0; i < FD_SETSIZE; i++)
+    clientes[i] = -1;
+
+  FD_ZERO(&todos_fds);
+  FD_SET(s, &todos_fds);
+
   //aceita conexoes de um client
-  while ((new_s = accept(s, (struct sockaddr *)&client, (socklen_t *)&c)))
+  while (1)
   {
-    // traduz porta e ip
-    inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
-    printf("\nNovo cliente conectado\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
-
-    // cria fork do processo
-    if ((pid = fork()) == -1)
+    novo_set = todos_fds;
+    nready = select(maxfd + 1, &novo_set, NULL, NULL, NULL);
+    if (nready < 0)
     {
-      perror("Erro ao criar processo do fork");
-      close(new_s);
-      continue;
+      perror("select");
+      exit(1);
     }
-
-    // processo pai
-    if (pid > 0)
+    if (FD_ISSET(s, &novo_set))
     {
-      close(new_s);
-      continue;
-    }
-
-    // processo filho
-    //Recebe uma mensagem do client
-    while ((read_size = recv(new_s, buf, MAX_LINE, 0)) > 0)
-    {
-      inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
-      printf("Nova mensagem recebida de\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
-
-      //struct packet pkt = decode(buf, ntohs(client.sin_port));
-      //addCarPacket(pkt);
-
-      struct car cars[N_CARS] = {
-          {1, {S, 7, 2, 2, 5, 4}},
-          {1, {O, 7, 2, 2, 5, 3}}};
-
-      // carByPort(cars, 4);
-      // printf("Time result: %d", checkMoment(cars));
-
-      do
+      len = sizeof(client);
+      if ((new_s = accept(s, (struct sockaddr *)&client, &len)) < 0)
       {
-        k = colisionAvoidance(cars);
-      } while (!k);
-
-      printResolution(cars);
-
-      if (response)
-      {
-        char *str = (char *)malloc(sizeof(char) * 30);
-        // sprintf(str, "%d", carByPort.packet.resolution);
-        sprintf(str, "%d", 1);
-        write(new_s, str, 1);
+        perror("simplex-talk: accept");
+        exit(1);
       }
 
-      //clear buffer
-      bzero(buf, sizeof(buf));
+      // traduz porta e ip
+      inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
+      printf("\nNovo cliente conectado\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
+
+      for (i = 0; i < FD_SETSIZE; i++)
+      {
+        if (clientes[i] < 0)
+        {
+          clientes[i] = new_s; //guarda descritor
+          break;
+        }
+      }
+
+      if (i == FD_SETSIZE)
+      {
+        perror("Numero maximo de clientes atingido.");
+        exit(1);
+      }
+      FD_SET(new_s, &todos_fds); // adiciona novo descritor ao conjunto
+      if (new_s > maxfd)
+        maxfd = new_s; // para o select
+      if (i > cliente_num)
+        cliente_num = i; // Ã­ndice mÃ¡ximo no vetor clientes[]
+      if (--nready <= 0)
+        continue; // nÃ£o existem mais descritores para serem lidos
     }
 
-    if (read_size == 0)
-    {
-      puts("Cliente desconectado");
-      fflush(stdout);
-    }
-    else if (read_size == -1)
-    {
-      perror("Recebimento falhou");
-    }
+    for (i = 0; i <= cliente_num; i++)
+    { // verificar se hÃ¡ dados em todos os clientes
+      if ((sockfd = clientes[i]) < 0)
+        continue;
+      if (FD_ISSET(sockfd, &novo_set))
+      {
+        if ((len = recv(sockfd, buf, sizeof(buf), 0)) == 0)
+        {
+          //conexÃ£o encerrada pelo cliente
+          close(sockfd);
+          FD_CLR(sockfd, &todos_fds);
+          clientes[i] = -1;
+        }
+        else
+        {
+          inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
+          printf("Nova mensagem recebida de\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
 
-    // fecha processo filho
-    close(new_s);
+          struct packet pkt = decode(buf, ntohs(client.sin_port));
+
+          int resolution = colisionAvoidance(pkt);
+
+          //printResolution();
+
+          printf("\n\n GO: %d, STOP: %d\n\n", N_GO, N_STOP);
+
+          if (response)
+          {
+            char *str = (char *)malloc(sizeof(char) * 30);
+            sprintf(str, "%d", resolution);
+            write(new_s, str, 1);
+          }
+        }
+        if (--nready <= 0)
+          break; // nÃ£o existem mais descritores para serem lidos
+      }
+    }
   }
-
-  if (new_s < 0)
-  {
-    perror("Aceite falhou");
-    return 1;
-  }
-
-  close(new_s);
-  close(s);
-
-  return 0;
 }
