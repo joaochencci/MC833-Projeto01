@@ -29,6 +29,7 @@ struct packet
   int position;
   int speed;
   int size;
+  unsigned int timestamp;
   unsigned int port;
   int resolution;
 } packet;
@@ -120,6 +121,23 @@ struct packet moveCar(struct packet packet)
     }
   }
   return packet;
+}
+
+int checkMoment(struct car cars[]) {
+  int result=1, i=0;
+
+  if (N_CARS >= 2) {
+    for (i=0; i < N_CARS-1; i++) {
+      if (cars[i].packet.timestamp == cars[i+1].packet.timestamp) {
+        result = 1;
+      } else {
+        result = 0;
+        break;
+      }
+    }
+  }
+
+  return result;
 }
 
 int detectColision(struct packet car1, struct packet car2)
@@ -251,7 +269,8 @@ int detectColision(struct packet car1, struct packet car2)
 
 int colisionAvoidance(struct car cars[])
 {
-  if (1 /* array está preenchido com mesmo grupo de movimentos */)
+
+  if (checkMoment(cars))
   {
     // calcula proxima posicao
     int i = 0;
@@ -292,12 +311,16 @@ int colisionAvoidance(struct car cars[])
   }
 }
 
-struct car carByPort()
+struct car carByPort(struct car cars[], unsigned int port)
 {
 
-  /* TODO: Implementar esse método */
+  int i = 0;
+  for (i = 0; i < N_CARS; i++) {
+    if (cars[i].packet.port == port) {
+      return cars[i];
+    }
+  }
 
-  //return cars[0];
 }
 
 void printResolution(struct car cars[])
@@ -385,8 +408,11 @@ int main()
       //addCarPacket(pkt);
 
       struct car cars[N_CARS] = {
-          {1, {S, 7, 2, 2}},
-          {1, {O, 7, 2, 2}}};
+          {1, {S, 7, 2, 2, 5, 4}},
+          {1, {O, 7, 2, 2, 5, 3}}};
+
+      // carByPort(cars, 4);
+      // printf("Time result: %d", checkMoment(cars));
 
       do
       {
