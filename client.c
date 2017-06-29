@@ -19,8 +19,8 @@
 #define CONFORT 6
 
 #define GO 1
-#define STOP 0
-#define EMERGENCY -1
+#define STOP 2
+#define EMERGENCY 3
 
 struct packet {
    int direction;

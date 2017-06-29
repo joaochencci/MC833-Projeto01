@@ -8,7 +8,7 @@
 #define LISTEN_PORT 12345
 #define MAX_PENDING 5
 #define MAX_LINE 256
-#define N_CARS 5
+#define N_CARS 2
 
 #define N 0
 #define S 1
@@ -20,8 +20,8 @@
 #define CONFORT 6
 
 #define GO 1
-#define STOP 0
-#define EMERGENCY -1
+#define STOP 2
+#define EMERGENCY 3
 
 struct packet
 {
@@ -38,8 +38,6 @@ struct car
   int valid;
   struct packet packet;
 } car;
-
-struct car cars[N_CARS] = {{0}, {0}, {0}, {0}, {0}};
 
 char *printCar(struct packet packet)
 {
@@ -60,21 +58,7 @@ struct packet decode(char *rcvMsg, unsigned int port)
   return p;
 }
 
-int countValids()
-{
-  int counter = 0, i = 0;
-  for (i = 0; i < N_CARS; i++)
-  {
-    if (cars[i].valid == 1)
-    {
-      counter += 1;
-    }
-  }
-
-  return counter;
-}
-
-void addCarPacket(struct packet pkt)
+/*void addCarPacket(struct packet pkt)
 {
   int i = 0;
 
@@ -96,7 +80,7 @@ void addCarPacket(struct packet pkt)
       break;
     }
   }
-}
+}*/
 
 struct packet moveCar(struct packet packet)
 {
@@ -140,65 +124,123 @@ struct packet moveCar(struct packet packet)
 
 int detectColision(struct packet car1, struct packet car2)
 {
-  int c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+  int c1 = 0, c2 = 0, c3 = 0, c4 = 0, lb = 0, ub = 0;
 
-  if (car1.direction == N)
+  if (car1.direction == N || car1.direction == L)
   {
-    if (car1.position <= 6 && car1.position > 6 - car1.size)
-      c4++;
-    if (car1.position <= 5 && car1.position > 5 - car1.size)
-      c2++;
+    ub = car1.position;
+    lb = car1.position - car1.size + 1;
+
+    if (car1.direction == N)
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c4++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c2++;
+      }
+    }
+    else
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c3++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c4++;
+      }
+    }
   }
-  if (car1.direction == S)
+  else
   {
-    if (car1.position >= 6 && car1.position < 6 + car1.size)
-      c3++;
-    if (car1.position >= 5 && car1.position < 5 + car1.size)
-      c1++;
-  }
-  if (car1.direction == L)
-  {
-    if (car1.position <= 6 && car1.position > 6 - car1.size)
-      c2++;
-    if (car1.position <= 5 && car1.position > 5 - car1.size)
-      c1++;
-  }
-  if (car1.direction == O)
-  {
-    if (car1.position >= 6 && car1.position < 6 + car1.size)
-      c4++;
-    if (car1.position >= 5 && car1.position < 5 + car1.size)
-      c3++;
+    ub = car1.position + car1.size - 1;
+    lb = car1.position;
+
+    if (car1.direction == S)
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c3++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c1++;
+      }
+    }
+    else
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c2++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c1++;
+      }
+    }
   }
 
-  if (car2.direction == N)
+  if (car2.direction == N || car2.direction == L)
   {
-    if (car2.position <= 6 && car2.position > 6 - car2.size)
-      c4++;
-    if (car2.position <= 5 && car2.position > 5 - car2.size)
-      c2++;
+    ub = car2.position;
+    lb = car2.position - car2.size + 1;
+
+    if (car2.direction == N)
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c4++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c2++;
+      }
+    }
+    else
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c3++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c4++;
+      }
+    }
   }
-  if (car2.direction == S)
+  else
   {
-    if (car2.position >= 6 && car2.position < 6 + car2.size)
-      c3++;
-    if (car2.position >= 5 && car2.position < 5 + car2.size)
-      c1++;
+    ub = car2.position + car2.size - 1;
+    lb = car2.position;
+
+    if (car2.direction == S)
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c3++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c1++;
+      }
+    }
+    else
+    {
+      if (lb <= 5 || ub >= 5)
+      {
+        c2++;
+      }
+      if (lb <= 6 || ub >= 6)
+      {
+        c1++;
+      }
+    }
   }
-  if (car2.direction == L)
-  {
-    if (car2.position <= 6 && car2.position > 6 - car2.size)
-      c2++;
-    if (car2.position <= 5 && car2.position > 5 - car2.size)
-      c1++;
-  }
-  if (car2.direction == O)
-  {
-    if (car2.position >= 6 && car2.position < 6 + car2.size)
-      c4++;
-    if (car2.position >= 5 && car2.position < 5 + car2.size)
-      c3++;
-  }
+
+  printf("c: %d %d %d %d\n", c1, c2, c3, c4);
 
   if (c1 > 1 || c2 > 1 || c3 > 1 || c4 > 1)
   {
@@ -211,15 +253,12 @@ int colisionAvoidance(struct car cars[])
 {
   if (1 /* array está preenchido com mesmo grupo de movimentos */)
   {
-    char* str = printCar(cars[0].packet);
     // calcula proxima posicao
     int i = 0;
     for (i = 0; i < N_CARS; i++)
     {
       cars[i].packet = moveCar(cars[i].packet);
     }
-
-    str = printCar(cars[0].packet);
 
     // verifica sobreposicao de carros
     int j = 0;
@@ -258,7 +297,7 @@ struct car carByPort()
 
   /* TODO: Implementar esse método */
 
-  return cars[0];
+  //return cars[0];
 }
 
 void printResolution(struct car cars[])
@@ -342,20 +381,15 @@ int main()
       inet_ntop(AF_INET, &(client.sin_addr), ip, INET_ADDRSTRLEN);
       printf("Nova mensagem recebida de\nIP: %s, Porta: %u\n", ip, ntohs(client.sin_port));
 
-      struct packet pkt = decode(buf, ntohs(client.sin_port));
-      addCarPacket(pkt);
+      //struct packet pkt = decode(buf, ntohs(client.sin_port));
+      //addCarPacket(pkt);
+
+      struct car cars[N_CARS] = {
+          {1, {S, 7, 2, 2}},
+          {1, {O, 7, 2, 2}}};
 
       do
       {
-        struct car cars[N_CARS] = {
-            {1, {N, 11, 2, 2}},
-            {1, {4, O, 2, 1}},
-            {1, {O, 7, 2, 1}},
-            {1, {L, 11, 2, 1}},
-            {1, {S, 4, 2, 2}}};
-
-        printResolution(cars);
-
         k = colisionAvoidance(cars);
       } while (!k);
 
